@@ -43,7 +43,12 @@ from .._chat_message import (
 )
 from .._generate_config import GenerateConfig
 from .._model import ModelAPI
-from .._model_output import ChatCompletionChoice, ModelOutput, StopReason
+from .._model_output import (
+    ChatCompletionChoice,
+    ModelOutput,
+    ModelUsage,
+    StopReason,
+)
 from .._util import chat_api_tool
 from .util import model_base_url
 
@@ -53,6 +58,8 @@ VERTEX_SAFETY_SETTINGS = {
     HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
 }
+
+GOOGLE_API_KEY = "GOOGLE_API_KEY"
 
 
 class GoogleAPI(ModelAPI):
@@ -65,7 +72,11 @@ class GoogleAPI(ModelAPI):
         **model_args: Any,
     ) -> None:
         super().__init__(
-            model_name=model_name, base_url=base_url, api_key=api_key, config=config
+            model_name=model_name,
+            base_url=base_url,
+            api_key=api_key,
+            api_key_vars=[GOOGLE_API_KEY],
+            config=config,
         )
 
         # configure genai client
@@ -112,7 +123,15 @@ class GoogleAPI(ModelAPI):
             )
             choices = completion_choices_from_candidates(response.candidates)
             choice = choices[0]
-            return ModelOutput(model=self.model_name, choices=[choice])
+            return ModelOutput(
+                model=self.model_name,
+                choices=[choice],
+                usage=ModelUsage(
+                    input_tokens=response.usage_metadata.prompt_token_count,
+                    output_tokens=response.usage_metadata.candidates_token_count,
+                    total_tokens=response.usage_metadata.total_token_count,
+                ),
+            )
         except ValueError as ex:
             # If a safety filter is triggered, the response will be empty and a ValueError will be raised
             return ModelOutput.from_content(
