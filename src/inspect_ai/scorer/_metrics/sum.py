@@ -2,6 +2,7 @@ import numpy as np
 
 from .._metric import Metric, Score, metric
 
+
 @metric
 def sum() -> Metric:
     """Compute sum of all scores.
